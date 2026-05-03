@@ -47,7 +47,7 @@ def sql_value(v: Any) -> str:
     if isinstance(v, date):
         return f"'{v.isoformat()}'"
     if isinstance(v, (dict, list)):
-        encoded = json.dumps(v, separators=(', ', ': ')).replace("'", "''")
+        encoded = json.dumps(v, separators=(', ', ': '), ensure_ascii=False).replace("'", "''")
         return f"'{encoded}'::jsonb"
     if isinstance(v, str):
         escaped = v.replace("'", "''")
