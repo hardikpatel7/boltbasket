@@ -1,6 +1,6 @@
 """Shared helpers: SQL value escaping, file writing, RNG/Faker init, date helpers."""
 import json
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Iterable
@@ -15,28 +15,40 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 def sql_value(v: Any) -> str:
-    """Render a Python value as a Postgres SQL literal."""
+    """Render a Python value as a Postgres SQL literal.
+
+    - numpy scalar types (int8..int64, float32/64, etc.) are handled via the
+      np.integer / np.floating abstract bases so callers don't need to coerce
+      every rng.integers() result with int(...).
+    - datetimes MUST be timezone-aware. Naive datetimes raise ValueError —
+      otherwise they'd silently land in TIMESTAMPTZ columns as session-local
+      time, producing wrong data.
+    - dict/list values that contain apostrophes are SQL-escaped after JSON
+      encoding (otherwise an apostrophe inside a JSON string would terminate
+      the SQL literal early — common with Faker en_IN names).
+    - Decimal values render at full precision; Postgres applies column scale.
+    """
     if v is None:
         return "NULL"
     if isinstance(v, bool):
         return "TRUE" if v else "FALSE"
-    if isinstance(v, int):
-        return str(v)
-    if isinstance(v, float):
-        return f"{v:.2f}"
+    if isinstance(v, (int, np.integer)):
+        return str(int(v))
+    if isinstance(v, (float, np.floating)):
+        return f"{float(v):.2f}"
     if isinstance(v, Decimal):
-        return f"{v:.2f}"
+        return str(v)
     if isinstance(v, datetime):
-        # Render as Postgres timestamptz with offset
-        return f"'{v.strftime('%Y-%m-%d %H:%M:%S%z')}'".replace(
-            "+0530'", "+05:30'"
-        ).replace("-0530'", "-05:30'")
+        if v.tzinfo is None:
+            raise ValueError(
+                f"sql_value: datetime must be tz-aware, got naive: {v!r}"
+            )
+        return f"'{v.isoformat(sep=' ')}'"
     if isinstance(v, date):
         return f"'{v.isoformat()}'"
-    if isinstance(v, dict):
-        return f"'{json.dumps(v, separators=(', ', ': '))}'::jsonb"
-    if isinstance(v, list):
-        return f"'{json.dumps(v, separators=(', ', ': '))}'::jsonb"
+    if isinstance(v, (dict, list)):
+        encoded = json.dumps(v, separators=(', ', ': ')).replace("'", "''")
+        return f"'{encoded}'::jsonb"
     if isinstance(v, str):
         escaped = v.replace("'", "''")
         return f"'{escaped}'"
@@ -66,7 +78,6 @@ def random_ist_datetime(
 
     `hour_dist` optionally biases hour-of-day. Default: uniform.
     """
-    from datetime import timedelta
     days_span = (end - start).days
     day_offset = int(rng.integers(0, days_span + 1))
     chosen_date = start + timedelta(days=day_offset)

@@ -1,7 +1,9 @@
 """Tests for common helpers."""
 from datetime import date, datetime
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+import numpy as np
 import pytest
 
 from generator import common, config
@@ -39,6 +41,41 @@ def test_sql_value_datetime_returns_timestamptz_literal():
 
 def test_sql_value_dict_returns_jsonb_literal():
     assert common.sql_value({"a": 1, "b": "two"}) == """'{"a": 1, "b": "two"}'::jsonb"""
+
+
+def test_sql_value_list_returns_jsonb_literal():
+    assert common.sql_value([1, 2, "three"]) == """'[1, 2, "three"]'::jsonb"""
+
+
+def test_sql_value_dict_with_apostrophe_escapes_single_quote():
+    """JSONB values containing ' must be SQL-escaped or the literal terminates early."""
+    rendered = common.sql_value({"name": "Mohan's Market"})
+    assert rendered == """'{"name": "Mohan''s Market"}'::jsonb"""
+
+
+def test_sql_value_handles_numpy_integer_scalars():
+    """rng.integers() returns np.int64 by default; sql_value must accept it."""
+    assert common.sql_value(np.int64(42)) == "42"
+    assert common.sql_value(np.int32(7)) == "7"
+    assert common.sql_value(np.int8(-5)) == "-5"
+
+
+def test_sql_value_handles_numpy_floating_scalars():
+    assert common.sql_value(np.float64(12.5)) == "12.50"
+    assert common.sql_value(np.float32(3.14)) == "3.14"
+
+
+def test_sql_value_decimal_preserves_precision():
+    """Decimal renders as-is; Postgres applies column-level scale, not us."""
+    assert common.sql_value(Decimal("99.50")) == "99.50"
+    assert common.sql_value(Decimal("99.999")) == "99.999"
+
+
+def test_sql_value_naive_datetime_raises():
+    """A naive datetime in a TIMESTAMPTZ column would be silently mis-tz'd."""
+    naive = datetime(2025, 10, 15, 12, 30, 0)
+    with pytest.raises(ValueError, match="tz-aware"):
+        common.sql_value(naive)
 
 
 def test_get_rng_is_seeded_deterministically():
