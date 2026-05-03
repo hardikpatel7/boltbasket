@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from generator import common, config
+from generator import common, config, products
 
 IST = ZoneInfo("Asia/Kolkata")
 ANCHOR = config.ANCHOR_DATE
@@ -23,8 +23,8 @@ STORE_IDS = list(range(1, 13))
 # Cities (city_id 1..3)
 CITY_IDS = [1, 2, 3]
 
-# Active products (product_id 1..10) — bulk references these for #7 overlap
-ACTIVE_PRODUCT_IDS = list(range(1, 11))
+# Active products from the shared products module (canonical for the generator)
+ACTIVE_PRODUCT_IDS = products.ACTIVE_PRODUCT_IDS
 
 
 def _generate_riders():
@@ -205,57 +205,41 @@ def _generate_price_list_items():
     # = 30 rows of guaranteed triple-overlap
 
     for product_id in ACTIVE_PRODUCT_IDS:
+        base_price = products.BASE_PRICES[product_id]
         # Global override: ~5% off base
-        override_global = round(float(rng.uniform(0.93, 0.97)) * _base_price(product_id), 2)
+        override_global = round(float(rng.uniform(0.93, 0.97)) * base_price, 2)
         rows.append((1, product_id, override_global, True))
 
         # One city override (2..7)
         city_pl_id = int(rng.integers(2, 8))
-        override_city = round(float(rng.uniform(0.90, 0.95)) * _base_price(product_id), 2)
+        override_city = round(float(rng.uniform(0.90, 0.95)) * base_price, 2)
         rows.append((city_pl_id, product_id, override_city, True))
 
         # One store override (8..15)
         store_pl_id = int(rng.integers(8, 16))
-        override_store = round(float(rng.uniform(0.85, 0.92)) * _base_price(product_id), 2)
+        override_store = round(float(rng.uniform(0.85, 0.92)) * base_price, 2)
         rows.append((store_pl_id, product_id, override_store, True))
 
-    # 30 rows so far. Now add ~270 more items distributed across the 15 price_lists,
-    # using the same 10 products with various overrides (no UNIQUE conflict since
-    # we cycle through different price_list × product combos that don't yet exist).
+    # 30 rows so far. Fill the remaining slots up to the cap by enumerating ALL
+    # valid (price_list_id, product_id) pairs, removing the ones we already have,
+    # shuffling deterministically, and taking exactly enough to fill.
+    # This avoids the birthday-paradox tail where random-with-rejection can
+    # finish a few rows short of the cap.
     existing_pairs = {(r[0], r[1]) for r in rows}
+    all_pairs = [(pl, p) for pl in range(1, 16) for p in ACTIVE_PRODUCT_IDS]
+    remaining = [pair for pair in all_pairs if pair not in existing_pairs]
     needed = config.CARDINALITIES["operational"]["price_list_items"] - len(rows)
-    attempts = 0
-    while len(rows) - 30 < needed and attempts < needed * 5:
-        attempts += 1
-        pl_id = int(rng.integers(1, 16))
-        product_id = int(rng.choice(ACTIVE_PRODUCT_IDS))
-        if (pl_id, product_id) in existing_pairs:
-            continue
-        existing_pairs.add((pl_id, product_id))
-        override = round(float(rng.uniform(0.80, 0.99)) * _base_price(product_id), 2)
-        rows.append((pl_id, product_id, override, True))
+    if needed > 0:
+        # Deterministic shuffle via permutation indices
+        order = rng.permutation(len(remaining))
+        for idx in order[:needed]:
+            pl_id, product_id = remaining[int(idx)]
+            override = round(
+                float(rng.uniform(0.80, 0.99)) * products.BASE_PRICES[product_id], 2
+            )
+            rows.append((pl_id, product_id, override, True))
 
     return rows
-
-
-def _base_price(product_id: int) -> float:
-    """Approximate base prices for the 10 smoke-seed products (in INR).
-
-    These should match smoke seed values closely enough that overrides feel
-    plausible. Real values from supabase/seed/01_smoke_seed.sql.
-    """
-    return {
-        1: 72.00,    # Amul Gold Milk 1L
-        2: 65.00,    # Mother Dairy Yogurt 400g (approximation)
-        3: 50.00,    # Britannia Brown Bread 400g
-        4: 295.00,   # Aashirvaad Atta 5kg
-        5: 175.00,   # MDH Garam Masala 100g
-        6: 95.00,    # Parle-G Original 800g
-        7: 240.00,   # Tata Tea Premium 500g
-        8: 165.00,   # Cadbury Dairy Milk Silk 60g
-        9: 195.00,   # Nivea Soft Light Moisturiser 100ml
-        10: 145.00,  # BoltBasket Daily Toor Dal 1kg
-    }.get(product_id, 100.00)
 
 
 def write(path: Path) -> None:
