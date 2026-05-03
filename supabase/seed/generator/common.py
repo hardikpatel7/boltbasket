@@ -173,6 +173,9 @@ def write_sql_file(
                 rendered = ", ".join(sql_value(v) for v in row)
                 value_lines.append(f"  ({rendered})")
             lines.append(",\n".join(value_lines) + ";")
-            lines.append("")
+        # One blank line AFTER the table's last chunk (between tables only).
+        # Chunks of the same table are emitted back-to-back so test parsers
+        # using split("\n\n") capture the full table section in one piece.
+        lines.append("")
 
     path.write_text("\n".join(lines) + "\n")

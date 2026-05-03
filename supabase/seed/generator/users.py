@@ -92,9 +92,6 @@ def write(path: Path) -> None:
     user_rows = _generate_users()
     address_rows = _generate_addresses(num_users=len(user_rows))
 
-    # chunk_size is set larger than either cardinality so that each table
-    # section emits a single INSERT statement with no mid-section blank lines.
-    # This is required for the test helpers which split on "\n\n" to count rows.
     common.write_sql_file(
         path=path,
         title="Phase 4b — 02b users",
@@ -115,5 +112,4 @@ def write(path: Path) -> None:
             "would set it on first address creation. Setting it here would",
             "require a separate UPDATE pass which we skip for the bulk seed.",
         ],
-        chunk_size=5_000,
     )
