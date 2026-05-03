@@ -43,3 +43,9 @@ def test_sub_seed_isolates_modules():
 
 def test_sub_seed_is_int():
     assert isinstance(config.sub_seed("users"), int)
+
+
+def test_sub_seed_unique_across_all_modules():
+    """No two module names in CARDINALITIES collide on sub_seed."""
+    seeds = [config.sub_seed(name) for name in config.CARDINALITIES]
+    assert len(seeds) == len(set(seeds)), "sub_seed collision across module names"

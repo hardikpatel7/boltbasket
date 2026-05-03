@@ -70,9 +70,16 @@ CITY_CODES = {1: "BLR", 2: "BOM", 3: "PNQ"}
 
 
 def sub_seed(module_name: str) -> int:
-    """Derive a stable per-module seed from the global SEED + module name.
+    """Derive a stable per-module integer seed from the module name.
 
-    Isolates RNG state so regenerating one module doesn't shift others' output.
+    Takes the first 8 bytes of SHA-256(module_name) as a big-endian integer,
+    then XORs with SEED. The hash ensures no two module names collide; the
+    XOR provides a (lightweight) tie to the global SEED so changing SEED
+    yields different per-module seeds for the same name.
+
+    Isolation guarantee: sub_seed("users") and sub_seed("orders") produce
+    independent seeds, so regenerating one module's output never shifts
+    another module's RNG state.
     """
     h = hashlib.sha256(module_name.encode("utf-8")).digest()
     return int.from_bytes(h[:8], "big") ^ SEED
