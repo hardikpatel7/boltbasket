@@ -2,8 +2,14 @@
 
 Owns Imperfection #10: same order → multiple ad_attributions rows from
 different attribution models (last_click, view_through, multi_touch_linear).
+
+Known limitation: attribution timestamps (`attributed_at`) are sampled
+independently from the activity window. Some attributions may precede
+their order's `placed_at` — articles using temporal joins should be
+aware. Fixing this would require coupling advertising to orders' RNG
+stream, which we deliberately avoid to keep modules independently
+regenerable.
 """
-import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -23,11 +29,6 @@ N_CAMPAIGNS = config.CARDINALITIES["operational"]["ad_campaigns"]
 N_PLACEMENTS = config.CARDINALITIES["operational"]["ad_placements"]
 
 
-def _gen_session_uuid(rng) -> str:
-    raw = bytes(int(b) for b in rng.integers(0, 256, size=16))
-    return str(uuid.UUID(bytes=raw, version=4))
-
-
 def write(path: Path) -> None:
     rng = common.get_rng("advertising")
 
@@ -37,7 +38,7 @@ def write(path: Path) -> None:
     for _ in range(n_imp):
         placement_id = int(rng.integers(1, N_PLACEMENTS + 1))
         user_id = int(rng.choice(BULK_USER_IDS)) if rng.random() < 0.85 else None
-        session_id = _gen_session_uuid(rng)
+        session_id = common.random_uuid(rng)
         shown_at = common.random_ist_datetime(
             rng, config.ACTIVITY_START, config.ACTIVITY_END,
         )
@@ -81,7 +82,11 @@ def write(path: Path) -> None:
             attr_value, 1.0, 24, attr_at,
         ))
 
-        # 10% get view_through
+        # 10% get view_through.
+        # Convention: view_through credits 60% of last_click value (the user
+        # saw an ad but didn't click — discounted credit per typical industry
+        # multi-touch frameworks). Weight is still 1.0 since it's a single
+        # touch under the view_through model.
         if rng.random() < 0.10:
             campaign_id_vt = int(rng.integers(1, N_CAMPAIGNS + 1))
             placement_id_vt = int(rng.integers(1, N_PLACEMENTS + 1))

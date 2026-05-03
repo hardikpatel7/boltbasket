@@ -97,9 +97,8 @@ _MISC_KEYS = [
 
 
 def _gen_session_uuid(rng) -> str:
-    """Build a deterministic UUID (uuid4 from rng bytes)."""
-    raw = bytes(int(b) for b in rng.integers(0, 256, size=16))
-    return str(uuid.UUID(bytes=raw, version=4))
+    """Deterministic UUID from rng bytes — thin wrapper around common.random_uuid."""
+    return common.random_uuid(rng)
 
 
 def _gen_properties(rng, event_type: str) -> dict:

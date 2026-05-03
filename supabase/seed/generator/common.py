@@ -60,6 +60,13 @@ def get_rng(module_name: str) -> np.random.Generator:
     return np.random.default_rng(config.sub_seed(module_name))
 
 
+def random_uuid(rng: np.random.Generator) -> str:
+    """Build a deterministic-looking UUID4 from rng bytes (16 bytes → str)."""
+    import uuid
+    raw = bytes(int(b) for b in rng.integers(0, 256, size=16))
+    return str(uuid.UUID(bytes=raw, version=4))
+
+
 def get_faker(module_name: str) -> Faker:
     """Return a Faker instance with en_IN locale, seeded deterministically."""
     f = Faker("en_IN")
