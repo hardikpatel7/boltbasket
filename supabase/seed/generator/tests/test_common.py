@@ -71,6 +71,18 @@ def test_sql_value_decimal_preserves_precision():
     assert common.sql_value(Decimal("99.999")) == "99.999"
 
 
+def test_sql_value_jsonb_preserves_non_ascii():
+    """JSONB encoding must keep ₹ as ₹, not escape it to \\u20b9.
+
+    Imperfection #8's cart_value type-drift demo emits 'cart_value': '₹245.50'
+    strings; if json.dumps escaped to ASCII, the ₹ symbol would never appear
+    in the verify output and the imperfection would be invisible to readers.
+    """
+    rendered = common.sql_value({"cart_value": "₹199.50"})
+    assert "₹" in rendered
+    assert "\\u20b9" not in rendered
+
+
 def test_sql_value_naive_datetime_raises():
     """A naive datetime in a TIMESTAMPTZ column would be silently mis-tz'd."""
     naive = datetime(2025, 10, 15, 12, 30, 0)

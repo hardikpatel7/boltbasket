@@ -190,12 +190,20 @@ def _gen_properties(rng, event_type: str) -> dict:
             k = _MISC_KEYS[int(rng.integers(0, pool_len))]
             props[k] = "v"
 
-    # --- Per-row indexed keys to reach ~600 distinct ---
-    # 1 in every 20 events gets a unique indexed key of the form
-    # "ctx_<N>" where N is drawn from 0..499 → 500 extra distinct keys.
+    # --- Indexed feature-flag / experiment keys (organic distribution) ---
+    # Real mobile analytics corpora typically have hundreds of feature_flag_<N>
+    # and experiment_<N> keys from per-feature rollouts. We sprinkle them at
+    # 5% per event to push the distinct-key count toward the ~600 the
+    # imperfection #8 doc claims for the BoltBasket production corpus.
     if rng.random() < 0.05:
-        idx_key = f"ctx_{int(rng.integers(0, 500))}"
-        props[idx_key] = "1"
+        roll = int(rng.integers(0, 100))
+        if roll < 60:
+            key_name = f"feature_flag_{int(rng.integers(0, 350))}"
+        elif roll < 90:
+            key_name = f"experiment_{int(rng.integers(0, 120))}_variant"
+        else:
+            key_name = f"rollout_{int(rng.integers(0, 80))}_bucket"
+        props[key_name] = "1"
 
     return props
 
