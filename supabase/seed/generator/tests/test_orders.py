@@ -40,3 +40,37 @@ def test_deterministic(tmp_path):
     orders.write(p1)
     orders.write(p2)
     assert p1.read_text() == p2.read_text()
+
+
+def test_every_order_has_mandatory_lifecycle_events(out_path):
+    """Mandatory events (placed/confirmed/picked/delivered) must survive the trim."""
+    orders.write(out_path)
+    text = out_path.read_text()
+    events_section = text.split("-- order_events: ")[1].split("\n\n")[0]
+    placed_orders: set[int] = set()
+    confirmed_orders: set[int] = set()
+    picked_orders: set[int] = set()
+    delivered_orders: set[int] = set()
+    for ln in events_section.splitlines():
+        m = re.match(r"\s*\((\d+),\s*'(\w+)',", ln)
+        if not m:
+            continue
+        order_id, event_type = int(m.group(1)), m.group(2)
+        if event_type == "placed":
+            placed_orders.add(order_id)
+        elif event_type == "confirmed":
+            confirmed_orders.add(order_id)
+        elif event_type == "picked":
+            picked_orders.add(order_id)
+        elif event_type == "delivered":
+            delivered_orders.add(order_id)
+
+    n_orders = config.CARDINALITIES["orders"]["orders"]
+    expected = set(range(
+        config.SMOKE_MAX_ORDER_ID + 1,
+        config.SMOKE_MAX_ORDER_ID + 1 + n_orders,
+    ))
+    for label, got in [("placed", placed_orders), ("confirmed", confirmed_orders),
+                       ("picked", picked_orders), ("delivered", delivered_orders)]:
+        missing = expected - got
+        assert not missing, f"{len(missing)} orders missing '{label}' event"

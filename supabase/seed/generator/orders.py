@@ -139,6 +139,7 @@ def write(path: Path) -> None:
             "store_id": store_id,
             "rider_id": rider_id,
             "subtotal": subtotal,
+            "total_amount": total,
             "placed_at": placed_at,
             "confirmed_at": confirmed_at,
             "picked_at": picked_at,
@@ -199,8 +200,14 @@ def write(path: Path) -> None:
         ))
 
     target_events = config.CARDINALITIES["orders"]["order_events"]
+    # Trim by removing only optional 'packed' events. Mandatory lifecycle
+    # events (placed/confirmed/picked/delivered) must remain on every order
+    # so downstream event-sourcing analysis can reconstruct order state.
     while len(events_rows) > target_events:
-        events_rows.pop(int(rng.integers(0, len(events_rows))))
+        packed_indices = [i for i, r in enumerate(events_rows) if r[1] == "packed"]
+        if not packed_indices:
+            break  # cannot trim further without breaking mandatory lifecycle
+        events_rows.pop(packed_indices[int(rng.integers(0, len(packed_indices)))])
     while len(events_rows) < target_events:
         idx = int(rng.integers(0, len(order_metadata)))
         meta = order_metadata[idx]
@@ -211,15 +218,14 @@ def write(path: Path) -> None:
         ))
 
     # --- Payments ---
+    # payment.amount = order.total_amount (must reconcile, otherwise mart
+    # queries summing payments cannot match orders.total_amount).
     payments_rows: list[tuple] = []
     methods = ["upi", "card", "wallet", "cod", "netbanking", "plus_credit"]
     method_weights = [0.55, 0.20, 0.10, 0.08, 0.05, 0.02]
-    items_subtotal_by_order: dict[int, float] = {}
-    for r in items_rows:
-        items_subtotal_by_order[r[0]] = items_subtotal_by_order.get(r[0], 0.0) + float(r[12])
     for meta in order_metadata:
         method = methods[int(rng.choice(6, p=method_weights))]
-        amount = items_subtotal_by_order.get(meta["order_id"], meta["subtotal"])
+        amount = meta["total_amount"]
         payments_rows.append((
             meta["order_id"], method, round(amount, 2), "success",
             f"PAY-{meta['order_id']:08d}",
@@ -234,13 +240,14 @@ def write(path: Path) -> None:
     for idx in refund_indices:
         meta = order_metadata[int(idx)]
         order_id = meta["order_id"]
-        # payment_id is 1-based by insertion order in payments_rows.
-        # Since payments are inserted in order_metadata order, the ith payment
-        # matches the ith order. Offset by smoke seed payment count (assumed 0
-        # bulk payments before this file; smoke seed owns its own payment rows).
-        payment_id = int(idx) + 1  # 1-based relative to bulk payments
+        # Payments are inserted in order_metadata order, so the i-th payment
+        # corresponds to the i-th order. Offset by SMOKE_MAX_PAYMENT_ID so this
+        # stays correct if the smoke seed ever starts inserting payments.
+        payment_id = config.SMOKE_MAX_PAYMENT_ID + int(idx) + 1
         rtype = ["full", "partial", "item_level"][int(rng.choice(3, p=[0.2, 0.3, 0.5]))]
-        amount = round(float(rng.uniform(50, 500)), 2)
+        # Refund amount can never exceed the original payment.
+        raw_amount = round(float(rng.uniform(50, 500)), 2)
+        amount = min(raw_amount, meta["total_amount"])
         reason = refund_reasons[int(rng.choice(4))]
         initiated = meta["delivered_at"] + timedelta(minutes=int(rng.integers(5, 240)))
         processed = initiated + timedelta(hours=int(rng.integers(1, 48)))

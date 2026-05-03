@@ -63,6 +63,8 @@ SMOKE_MAX_RIDER_ID = 3
 SMOKE_MAX_PRODUCT_ID = 10
 SMOKE_MAX_PRODUCT_ATTR_ID = 18
 SMOKE_MAX_ORDER_EVENT_ID = 5
+SMOKE_MAX_PAYMENT_ID = 0       # smoke seed inserts no payments
+SMOKE_MAX_REFUND_ID = 0        # smoke seed inserts no refunds
 
 # Used for #6: pre-2023 date floor for "legacy bad rows" in smoke seed only
 LEGACY_DATE_FLOOR = date(2023, 12, 31)
