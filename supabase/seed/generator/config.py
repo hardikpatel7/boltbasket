@@ -16,7 +16,10 @@ CARDINALITIES = {
         "ad_placements": 60,
         "promotions": 25,
         "price_lists": 15,
-        "price_list_items": 300,
+        # 150 = max unique (price_list_id, product_id) pairs given 15 lists ×
+        # 10 active products. The DDL UNIQUE(price_list_id, product_id) caps it.
+        # Plan said 300 — that was a math error. Total budget still in 200-220K.
+        "price_list_items": 150,
     },
     "users": {
         "users": 3_500,
