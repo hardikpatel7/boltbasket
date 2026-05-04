@@ -143,6 +143,37 @@ When future-you (or future-Claude) wonders "why did we choose X?" — the answer
 
 ---
 
+## 2026-05-04 — Phase 5 complete: public README + dual license + contributing posture
+
+**What changed:**
+
+1. New `README.md` at repo root (replaces the previous internal-facing onboarding README — `CLAUDE.md` already covers that role authoritatively, so the duplication wasn't serving anyone). Hybrid-audience structure: hero + jump-link block + Quickstart for the impatient; cast card + repo map + reproducibility section for the curious. Article index is a placeholder until Phase 6 ships the first piece.
+2. New `LICENSE` (MIT) covers code: the Python generator at `supabase/seed/generator/`, all SQL files in `supabase/`, and any future code in `queries/`.
+3. New `LICENSE-prose.md` (CC BY 4.0) covers prose: README, `articles/`, `bible/`, `schema/`, `decisions-log.md`, and other Markdown.
+4. README explicitly sets a non-OSS-community contributing posture: bug reports and typo PRs welcome; feature PRs will probably be politely closed.
+5. Article-to-source link convention locked in for Phase 6+: each article on Medium links to `queries/<article-slug>.sql` for its specific SQL, plus `bible/characters.md#<character-anchor>` for named engineers.
+
+**Why:** Phase 5's brief was a public README that introduces BoltBasket to anyone landing on the repo. The hybrid structure serves cold visitors in the first 30 seconds (hero), article readers in the next 10 (jump-link to article index), and curious developers in 5 minutes (Quickstart). Dual license keeps SQL fork-friendly while requiring credit on prose. The "no feature PRs" stance is set up-front so the project doesn't accumulate community-management overhead it doesn't have capacity for.
+
+**Author-fill placeholders left in the README** (resolve before publishing the repo):
+
+- `<REPO-URL>` in the Quickstart `git clone` line and in `LICENSE-prose.md` attribution example.
+- `[Medium](TBD)` and `[LinkedIn](TBD)` in the hero and "Who's behind this" sections.
+
+**Verification performed before commit:**
+
+- Banned-phrase grep (`comprehensive`, `robust`, `powerful`, `seamless`, `leverage`, `deep dive`, `in today's fast`, `in the world of data`, `this project aims to`) returned zero matches.
+- All 3 H2 jump-link anchors resolve (`#articles`, `#quickstart`, `#meet-the-cast`).
+- All 11 relative paths in the README resolve (`bible/`, `schema/`, `supabase/`, `articles/`, `queries/`, `docs/superpowers/`, `schema/imperfections.md`, `supabase/README.md`, `bible/characters.md`, `LICENSE`, `LICENSE-prose.md`).
+- All 14 character anchors target actual `### <Name>` headings in `bible/characters.md`.
+- All 10 Quickstart target SQL files exist (1 smoke + 7 bulk + 1 marts + 1 verify).
+
+**Affects:** `README.md`, `LICENSE`, `LICENSE-prose.md`. No code changes, no schema changes, no Supabase impact.
+
+**What's next:** Push the repo to GitHub (Phase 5's natural endpoint, gated on author-fill of `<REPO-URL>` and the Medium/LinkedIn handles). Then Phase 6 (Week 1 Post 1 draft).
+
+---
+
 ## How to use this log
 
 When you make a meaningful decision (cast change, scope change, content direction shift), add a dated entry here with:
