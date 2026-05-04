@@ -92,6 +92,57 @@ When future-you (or future-Claude) wonders "why did we choose X?" — the answer
 
 ---
 
+## 2026-05-03 — Phase 4b complete: full seed generator + verify extended + ~210K rows loaded
+
+**What changed:**
+
+1. New Python package at `supabase/seed/generator/` produces seven bulk SQL files (`02a` → `02g`) totalling **~210,000 rows** across 25 tables. Generator is deterministic (`SEED=42`; per-module sub-seeds via SHA-256 of module name XOR'd with SEED). Re-running `python generate.py` produces byte-identical SQL — enforced by `tests/test_determinism.py`.
+
+2. **Layered approach honored end-to-end.** Smoke seed remains untouched: bulk user_id starts at 6, bulk order_id starts at 4, bulk rider_id starts at 4, bulk product_id starts at 11. The 5 named users, 14 named employees, 3 named riders, 3 demo orders, 10 base products from smoke seed are all preserved. Verify confirms imperfections #1, #2, #2b, #4, #5, #6, #12 still surface correctly on the smoke seed rows.
+
+3. **The 5 new imperfections (Phase 4b's brief) are now exercised** and verified:
+   - **#3 (inventory snapshot/log drift):** 5 of 120 (store, product) cells deliberately drift between `store_inventory.quantity_on_hand` and the replay sum of `inventory_movements.quantity_change`. 3 negative, 2 positive, magnitudes ±2..±15. Drifted cells listed in the SQL header comment of `02c_inventory.sql`. Verify reports exactly 5 drifted cells.
+   - **#7 (price_list scope overlap):** 15 price_lists across 3 scope types (1 global + 6 city + 8 store). All 10 active products appear in all 3 scope types simultaneously. Verify reports exactly 10 products.
+   - **#8 (app_events.properties JSONB chaos):** 30K events with deliberate key-spelling drift (`product_id` 70% / `productId` 20% / `prod_id` 10%), type drift on `cart_value` (~20% rendered as `"₹X.XX"` strings), ~5% missing keys, ~5% stray keys, plus a sprinkling of realistic feature-flag/experiment indexed keys. Verify reports **677 distinct keys** across the corpus (target ~600, range 400-800).
+   - **#10 (multi-model ad_attributions):** ~30% of bulk orders (3,000) attributable; 100% get `last_click`, ~10% additionally `view_through`, ~5% additionally `multi_touch_linear` (1-3 rows per order, weights summing to 1.0). Total 3,557 attribution rows. Verify reports 407 orders appearing in ≥2 attribution model rows.
+   - **#11 (orphan products):** 50 new product rows added (20 discontinued with `(DISC)` suffix, 20 never-launched plausible BoltBasket SKUs, 10 test data with `TEST-LOREM-NNN` SKUs). All `is_active=FALSE`, never referenced from `store_inventory`, `inventory_movements`, `order_items`, or `price_list_items`. Verify reports exactly 50.
+
+4. **`supabase/verify/imperfections_check.sql` extended** with new check queries for all 5 new imperfections plus updated general row counts to bulk-seeded values (riders 53, users 3505, orders 10003, app_events ~30K, etc.).
+
+5. **Generator package contains 82 pytest tests** covering determinism (parametrized over all 7 modules, byte-identical hash check), per-module cardinalities (±2% tolerance), total row budget (200K-220K), and per-module imperfection signatures. **No tests touch the database** — they operate on generated SQL files only.
+
+6. **Live Supabase load complete.** Drop-and-reload not required: bulk seed loads on top of the smoke-seeded DB additively (using non-overlapping ID ranges and order_codes). Total load time ~5 minutes for ~27 MB of SQL. Verify passes fully green for all 11 imperfections we cover (#1, #2, #2b, #4, #5, #6, #3, #7, #8, #10, #11, #12 — #9 is out-of-scope).
+
+**Why:** Phase 4b was the planned next phase per CLAUDE.md. Articles need realistic enough data that queries return interesting answers; smoke seed alone (~100 rows) was too small for power-law product popularity, multi-day analytics, or any of the activity-volume-dependent imperfections. ~210K rows is a comfortable middle ground — fits the Supabase free tier, query performance starts to matter, and the data is dense enough that articles can do meaningful aggregations without contrivance.
+
+**Spec ↔ DDL reconciliations** (recorded here so future articles know):
+
+- **Spec said "4 price_list scope types" (city + store + time + category).** DDL only supports 3 (`global`, `city`, `store`); time-bounding is via `starts_at`/`ends_at` columns on the price_lists row, not a scope type. Plan and implementation use 3 scope types; "all 4 simultaneously" became "all 3 simultaneously."
+- **Spec called the snapshot column `quantity_available`.** DDL column is `quantity_on_hand`. Code uses `quantity_on_hand` throughout.
+- **`ad_attributions.attribution_model`** has 4 valid values (`last_click`, `view_through`, `multi_touch_linear`, `multi_touch_position_based`). Plan picks `multi_touch_linear` for the multi-touch case (simpler 1/N weights).
+- **`price_list_items` capped at 150**, not 300 as the plan claimed. Math: 15 price_lists × 10 active products with `UNIQUE(price_list_id, product_id)` = 150 max distinct pairs. Total bulk row budget unaffected (~210,690).
+
+**Notable issues caught during code review and fixed before sign-off:**
+
+- `numpy==2.0.0` was bumped to `2.2.2` (pre-Python-3.13 release; Python 3.13 wheels needed).
+- `common.sql_value` did not handle `np.int64` (the default return type of `rng.integers()` in numpy 2.x). Added `np.integer`/`np.floating` checks via abstract base classes.
+- `common.sql_value` did not escape single quotes inside JSONB-encoded dicts/lists. With Faker en_IN names containing apostrophes (e.g., "Mohan's Market"), this would have produced broken SQL. Now escapes after `json.dumps`.
+- `common.sql_value` was rendering ₹ as `₹` because `json.dumps` defaults to `ensure_ascii=True`. Set to `False` so non-ASCII chars survive (critical for Imperfection #8's `"₹245.50"` cart_value string demo).
+- `common.sql_value` accepted naive datetimes silently, which would have landed in TIMESTAMPTZ columns as session-local time. Now raises `ValueError`.
+- `orders.py` event-trim loop was randomly popping mandatory lifecycle events (placed/confirmed/picked/delivered) — empirically ~6% of orders were losing events. Fix: only trim optional `packed` events. Added regression test `test_every_order_has_mandatory_lifecycle_events`.
+- `orders.py` payment amounts were rolled independently of order totals (100% mismatch, avg INR 394 discrepancy). Now `payment.amount = order.total_amount`.
+- Refund amounts could exceed payment amounts. Now clamped.
+
+**Affects:** `supabase/seed/generator/*` (new), `supabase/seed/02*.sql` (generated, in repo), `supabase/verify/imperfections_check.sql` (extended), live Supabase database (loaded). All commits between `537ad98` (init) and the current HEAD form the Phase 4b series.
+
+**Operational rule going forward:**
+- Generator output (`supabase/seed/02*.sql`) is checked in. Re-running the generator should produce identical bytes; if it doesn't, the determinism test will catch it before commit.
+- The full reset flow is: drop schemas → DDL → smoke seed → 02a..02g → marts → verify. Documented in `supabase/seed/generator/README.md`.
+
+**What's next:** Phase 5 (public GitHub README) → Phase 6 (Week 1 Post 1 draft).
+
+---
+
 ## How to use this log
 
 When you make a meaningful decision (cast change, scope change, content direction shift), add a dated entry here with:
