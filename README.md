@@ -1,45 +1,102 @@
-# BoltBasket Content Project
+# BoltBasket
 
-A thought-leadership content project on data, AI, and business — built around a fictional Indian quick-commerce company called **BoltBasket** that serves as a recurring narrative device across all articles.
+BoltBasket is a fictional Indian quick-commerce company. The Postgres schema in this repo has 12 deliberate imperfections — circular foreign keys, snapshot/log drift, JSONB key chaos, the kind of thing every Series C engineering org actually ships. Each article on [Medium](TBD) walks through one of them as a story: who broke it, who debugged it, what they shipped. The data is here so you can run the queries yourself.
 
-## Why this exists
+## What you can do here
 
-Most technical writing on Medium uses generic, abstract examples. This project does the opposite: every concept is taught through a single, internally consistent fictional company that readers come to know — its people, its problems, its history. By article #20, "Priya," "Noel," and "the Diwali outage" are familiar to readers. That familiarity is the difference between content that gets read and content that gets remembered.
+- 📖 [**Read the articles**](#articles) — story-driven walk-throughs of one imperfection at a time, set inside BoltBasket
+- 🐘 [**Run the database yourself**](#quickstart) — ~5 minutes from clone to a live Postgres with 210K rows of plausible Indian quick-commerce data
+- 🎭 [**Meet the universe**](#meet-the-cast) — 14 named engineers and PMs you'll see recur across articles
 
-## How to use this project
+---
 
-If you're the author: read `CLAUDE.md`, then `bible/company.md`, then `bible/characters.md`. That's enough grounding to draft your first article.
+## Quickstart
 
-If you're Claude (any session): `CLAUDE.md` at the root tells you what to do.
+```bash
+git clone <REPO-URL> && cd boltbasket
+cd supabase/seed/generator && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+PYTHONPATH=.. python generate.py
+cd ../../..
+psql "$SUPABASE_DB_URL" -f supabase/seed/01_smoke_seed.sql
+for f in supabase/seed/02*.sql; do psql "$SUPABASE_DB_URL" -f "$f"; done
+psql "$SUPABASE_DB_URL" -f supabase/marts/01_marts_views.sql
+psql "$SUPABASE_DB_URL" -f supabase/verify/imperfections_check.sql
+```
 
-## Folder map
+You'll need: Postgres 15+ access (Supabase Cloud free tier works), Python 3.10+, `psql` on PATH, `SUPABASE_DB_URL` exported (or any `psql`-compatible connection string). Total time: ~5 minutes from clone to verify.
 
-- **`CLAUDE.md`** — master context, loaded by Claude in every session
-- **`style-guide.md`** — voice rules, banned words, conventions
-- **`bible/`** — the BoltBasket universe (company, characters, story arcs, timeline, stack)
-- **`schema/`** — conceptual data model design (entities, relationships, deliberate imperfections)
-- **`templates/`** — article skeletons (long-form and field note)
-- **`articles/`** — your drafts and published pieces will live here
-- **`queries/`** — SQL queries used in articles
-- **`assets/`** — diagrams, screenshots, images
+> **Need more options?** Detailed setup including Supabase Cloud signup, Docker-local Postgres, troubleshooting, and the per-DDL-file walkthrough lives in [`supabase/README.md`](supabase/README.md).
 
-## Build phases
+---
 
-1. **Phase 1 — The Bible** (DONE) — company lore, characters, story arcs, timeline, stack
-2. **Phase 2 — Schema design on paper** (DONE) — entities, relationships, imperfections catalog
-3. **Phase 3 — Project scaffolding** (DONE) — `CLAUDE.md`, style guide, templates, folder structure
-4. **Phase 4 — Supabase schema + seed data** (NEXT) — actual SQL DDL, seed scripts, deliberate messiness preserved
-5. **Phase 5 — Public GitHub README** (AFTER PHASE 4) — the introduction to BoltBasket that lives on GitHub
+## Articles
 
-## What to do next
+_No articles published yet — Phase 6 starts soon. Once they ship, each row in the table below maps article → key SQL files / verify queries the article references._
 
-1. **Read the bible.** Spend 30 minutes with `bible/company.md`, `bible/characters.md`, and at least skim the others. You'll have opinions. Good — that's the point.
-2. **Note your changes.** Mark anything that doesn't fit your taste (a character's vibe, a number that feels wrong, a story arc you'd rather kill). Easier to change now than after Supabase is built.
-3. **Confirm or push back on the schema design.** Read `schema/entities.md`, `schema/relationships.md`, and `schema/imperfections.md`. Anything missing? Anything overdone?
-4. **Then:** ping me to start Phase 4 (Supabase build).
+| # | Title | Concept | Imperfection | SQL / queries |
+|---|---|---|---|---|
 
-After Phase 4, we draft Week 1 Post 1.
+---
 
-## A note on the lore
+## Meet the cast
 
-The BoltBasket universe is meant to be a *living* document. As you write articles, new details will emerge — a story arc resolves, a character develops, a tooling decision gets made. Update the bible files as you go. Future-you (and future-Claude) will need them to stay consistent.
+| Name & Role | One-liner |
+|---|---|
+| **[Aryan Mehta](bible/characters.md#aryan-mehta)** — CEO | Reads dashboards constantly. Slacks a data engineer at 11pm when a number looks off. |
+| **[Sanya Kapoor](bible/characters.md#sanya-kapoor)** — COO | Mumbai-based operations brain. Voice of dark store managers who don't trust the data. |
+| **[Vikram Bansal](bible/characters.md#vikram-bansal)** — CTO | Made the 2021 AWS bet. Will jump into a midnight Slack thread to debug something interesting. |
+| **[Naveen Krishnan](bible/characters.md#naveen-krishnan)** — CFO | Old-school finance. Wants one source of truth; finds three. Brings up cross-cloud egress costs in QBRs. |
+| **[Priya Raghavan](bible/characters.md#priya-raghavan)** — Lead Data Engineer | Pragmatist. Protagonist of every 2am incident. Has a 4-page `things-i-said-i-would-fix.md` and counting. |
+| **[Noel Thomas](bible/characters.md#noel-thomas)** — EM, Data | Translates data team chaos to leadership. "Let me think overnight" becomes a 6-page Notion doc by morning. |
+| **[Devika Rao](bible/characters.md#devika-rao)** — Senior Data Engineer | Wrote the dbt style guide. Owns the Debezium → Kafka → BigQuery pipeline that runs on hopes and prayers. |
+| **[Arjun Pillai](bible/characters.md#arjun-pillai)** — Data Engineer | Newest hire. The audience surrogate — when he asks "why are we doing it this way?" it's the reader asking. |
+| **[Meera Joshi](bible/characters.md#meera-joshi)** — Analytics Engineer | Owns the dbt mart layer. The patient explainer in metric-definition disagreements. |
+| **[Siddharth (Sid) Patel](bible/characters.md#siddharth-sid-patel)** — Sr PM, CX | Sharp, opinionated, has Aryan's ear. Famously confrontational with Noel about engineering timelines. |
+| **[Rohan Desai](bible/characters.md#rohan-desai)** — PM, Growth | Experimentation-obsessed. Runs ~30 A/B tests a quarter. Lives in Amplitude. |
+| **[Anjali Singh](bible/characters.md#anjali-singh)** — PM, Supply & Inventory | Bridge between Bengaluru tech and Mumbai ops. Her features often span both AWS and GCP sides. |
+| **[Faisal Khan](bible/characters.md#faisal-khan)** — VP, Dark Store Operations | Doesn't write SQL but knows what every column should mean. Defender of the Mumbai Excels. |
+| **[Pooja Nair](bible/characters.md#pooja-nair)** — Director, Ad Sales | Hired in 2025 to build the ad business. Source of the multi-model attribution debate (#10). |
+
+Full bios in [`bible/characters.md`](bible/characters.md).
+
+---
+
+## What's in this repo
+
+- **[`bible/`](bible/)** — the BoltBasket universe. Cast bios, story arcs, year-by-year timeline, fictional tech stack. Read these before drafting articles or if you want the lore.
+- **[`schema/`](schema/)** — the data model on paper. Entities, relationships, and the catalog of [12 deliberate imperfections](schema/imperfections.md). Each imperfection has its own story-potential note.
+- **[`supabase/`](supabase/)** — the live reference database. DDL, smoke seed, generator for ~210K rows of bulk activity, marts (BigQuery-equivalent views), verify queries. Setup walkthrough lives in [`supabase/README.md`](supabase/README.md).
+- **[`articles/`](articles/)** — drafts and published pieces. (Empty until Phase 6.)
+- **[`queries/`](queries/)** — standalone SQL files referenced by articles. Each file named `<article-slug>.sql` so the link from Medium → GitHub is obvious.
+- **[`docs/superpowers/`](docs/superpowers/)** — design specs and implementation plans for this project's own development.
+
+---
+
+## Reproducibility
+
+- **Every article links to the specific SQL it walks through.** Article on Medium → `queries/<article-slug>.sql` here. Open it, run it, get the same answer the article does.
+- **The bulk seed generator is deterministic.** Fixed `SEED=42`. Re-running `python generate.py` produces byte-identical SQL — your data matches the data the article was written against, row for row.
+- **Verify your install** with `psql "$SUPABASE_DB_URL" -f supabase/verify/imperfections_check.sql`. The script reports counts for all 11 imperfections that are demonstrable in relational data (#1–#8, #10–#12; #9 lives in MongoDB conceptually).
+
+---
+
+## License & contributing
+
+**Two licenses, by file type:**
+
+- **Code** (Python generator, SQL files, queries): [MIT](LICENSE).
+- **Prose** (README, `articles/`, `bible/`, `schema/`, `decisions-log.md`): [CC BY 4.0](LICENSE-prose.md).
+
+**About contributions:** This is a writing project. The data and code exist to support specific articles, so I'm not accepting feature PRs.
+
+- **Bug reports welcome** — if a SQL query in an article doesn't reproduce, or a verify check fails on a clean install, please open an issue.
+- **Typo fixes welcome as PRs.**
+- **Other PRs will probably be politely closed** — please open an issue first if you want to propose something larger.
+
+---
+
+## Who's behind this
+
+**Built by Hardik Savaliya.** Articles on [Medium](TBD) · [LinkedIn](TBD).
+
+This is a personal project. Opinions and mistakes are mine, not my employer's.
