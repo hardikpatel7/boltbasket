@@ -22,8 +22,8 @@ You are free to:
 Under the following terms:
 
 - **Attribution** — You must give appropriate credit ("Hardik Savaliya, from
-  the BoltBasket project at <REPO-URL>"), provide a link to the license, and
-  indicate if changes were made.
+  the BoltBasket project at <https://github.com/hardikpatel7/boltbasket>"),
+  provide a link to the license, and indicate if changes were made.
 
 Full license text: <https://creativecommons.org/licenses/by/4.0/legalcode>
 

@@ -1,6 +1,6 @@
 # BoltBasket
 
-BoltBasket is a fictional Indian quick-commerce company. The Postgres schema in this repo has 12 deliberate imperfections — circular foreign keys, snapshot/log drift, JSONB key chaos, the kind of thing every Series C engineering org actually ships. Each article on [Medium](TBD) walks through one of them as a story: who broke it, who debugged it, what they shipped. The data is here so you can run the queries yourself.
+BoltBasket is a fictional Indian quick-commerce company. The Postgres schema in this repo has 12 deliberate imperfections — circular foreign keys, snapshot/log drift, JSONB key chaos, the kind of thing every Series C engineering org actually ships. Each article on [Medium](https://medium.com/@hardik_7) walks through one of them as a story: who broke it, who debugged it, what they shipped. The data is here so you can run the queries yourself.
 
 ## What you can do here
 
@@ -13,7 +13,7 @@ BoltBasket is a fictional Indian quick-commerce company. The Postgres schema in 
 ## Quickstart
 
 ```bash
-git clone <REPO-URL> && cd boltbasket
+git clone https://github.com/hardikpatel7/boltbasket.git && cd boltbasket
 cd supabase/seed/generator && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
 PYTHONPATH=.. python generate.py
 cd ../../..
@@ -97,6 +97,6 @@ Full bios in [`bible/characters.md`](bible/characters.md).
 
 ## Who's behind this
 
-**Built by Hardik Savaliya.** Articles on [Medium](TBD) · [LinkedIn](TBD).
+**Built by Hardik Savaliya.** Articles on [Medium](https://medium.com/@hardik_7) · [LinkedIn](TBD).
 
 This is a personal project. Opinions and mistakes are mine, not my employer's.
