@@ -16,7 +16,7 @@ When drafting an article, see if it can hook into an existing arc. Cross-referen
 
 **Why it matters for content:** This is BoltBasket's defining "we got humbled" moment. Reference it when writing about: monitoring philosophy, freshness vs. liveness checks, materialized views, the gap between "system is up" and "system is correct," post-incident processes, tech debt prioritization.
 
-**Status:** Resolved. A series of fixes shipped through Q1 2025, kicking off the broader semantic layer / data quality push.
+**Status:** Resolved. A series of fixes shipped through Q1 2025, kicking off the broader semantic layer / data quality push. Referenced in [Week 1 article](../articles/diwali-outage-freshness-vs-liveness.md): *The Diwali Outage That Taught Us the Difference Between "Healthy" and "Right"*.
 
 ---
 

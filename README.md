@@ -31,10 +31,11 @@ You'll need: Postgres 15+ access (Supabase Cloud free tier works), Python 3.10+,
 
 ## Articles
 
-_No articles published yet — Phase 6 starts soon. Once they ship, each row in the table below maps article → key SQL files / verify queries the article references._
-
 | # | Title | Concept | Imperfection | SQL / queries |
 |---|---|---|---|---|
+| 1 | [The Diwali Outage That Taught Us the Difference Between "Healthy" and "Right"](#)¹ | Liveness vs freshness | [#3](schema/imperfections.md) snapshot/log drift | [queries/diwali-outage-freshness-vs-liveness.sql](queries/diwali-outage-freshness-vs-liveness.sql) |
+
+*¹ Medium URL TBD — replace `(#)` with the Medium link once the article publishes at <https://medium.com/@hardik_7>.*
 
 ---
 

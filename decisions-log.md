@@ -174,6 +174,38 @@ When future-you (or future-Claude) wonders "why did we choose X?" — the answer
 
 ---
 
+## 2026-05-04 — Phase 6 complete: Week 1 article shipped (Diwali Outage)
+
+**What changed:**
+
+1. New article at `articles/diwali-outage-freshness-vs-liveness.md` — Week 1's published piece. Arc 1 (Diwali outage) + Imperfection #3 (inventory snapshot/log drift); teaches liveness vs freshness checks via Priya's POV. 1888 words across the 6-section template.
+2. New companion SQL at `queries/diwali-outage-freshness-vs-liveness.sql` — two runnable queries against the live Supabase. Output verbatim quoted in the article (5 success rows for liveness; 5 drifted cells for freshness).
+3. Diagram is embedded as ASCII block art directly in the article body (§3). Excalidraw upgrade is a future optional polish step before Medium publication; not required for the draft to ship.
+4. README article index now has its first row. Medium URL is `(#)` placeholder until the author publishes and replaces it.
+5. `bible/story-arcs.md` Arc 1 status field updated to flag Week 1 article references it.
+
+**Why:** Week 1's job is to set the voice, the structural bar, and seed the universe so future articles can callback to a known incident. The Diwali outage is the bible's flagship story; using it for Week 1 gives Week 2-N pieces an anchor to reference (the project's reader-retention tactic).
+
+**Conventions locked in by Week 1** (apply to all future articles):
+
+- **Filename pattern:** `articles/<slug>.md` and `queries/<slug>.sql` use the same slug. No date in filename. ≤6 words, lowercase-kebab, no stopwords.
+- **Character first-mention:** full name + role + link to `bible/characters.md#<anchor>`. Subsequent mentions: first name only (or "Sid" for Siddharth per bible rule).
+- **Diagram:** one canonical block diagram per article. Excalidraw source + PNG export under `assets/` is the polished form; ASCII block diagram embedded in the article body is the shippable fallback.
+- **End-of-article elements:** GitHub repo link + connect line, always. Cross-link to a previous BoltBasket article from Week 2 onward. No "subscribe and like" CTA.
+- **Cross-arc foreshadowing:** every article ends with a foreshadow line that hooks the next article. Week 1 → Week 2 = Two Revenues arc / semantic layer.
+- **Voice + banned phrases:** see `style-guide.md` and the README's Voice section. The 9-phrase banned list (`comprehensive`, `robust`, `powerful`, `seamless`, `leverage`, `deep dive`, "in today's fast", "in the world of data", "this project aims to") is gated by `grep -niE` before commit.
+
+**Verification performed before commit:** word count (1888, target 1500-2000); banned-phrase grep (zero matches); all 4 character anchors (Priya, Aryan, Noel, Vikram) linked once and resolve to existing `### <Name>` headings in `bible/characters.md`; specific-number density (6+ distinct numeric anchors); both required cross-links (queries file + repo) present.
+
+**Affects:** `articles/diwali-outage-freshness-vs-liveness.md`, `queries/diwali-outage-freshness-vs-liveness.sql`, `bible/story-arcs.md`, `README.md`. No code changes, no schema changes, no live-DB writes.
+
+**What's next:**
+
+- Author renders/finalizes the diagram (optional Excalidraw upgrade), reviews the article one more pass with fresh eyes, then publishes on Medium and replaces the README's `(#)` Medium URL placeholder.
+- Phase 7 (Week 2 article — Two Revenues arc, semantic layer) starts.
+
+---
+
 ## How to use this log
 
 When you make a meaningful decision (cast change, scope change, content direction shift), add a dated entry here with:
