@@ -26,3 +26,7 @@ build/
 
 # Supabase CLI artifacts
 supabase/.temp/
+
+# Local-only action logs / personal reference notes (not for the public repo)
+PHASE-*-ACTIONS.md
+NOTES-*.md
